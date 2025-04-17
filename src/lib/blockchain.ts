@@ -4,38 +4,79 @@ import { ethers } from 'ethers';
 // ABI for the University Project Repository contract
 const contractABI = [
   // Project Registration Functions
-  "function registerProject(string title, string description, string ipfsHash, uint256 departmentId, uint256 year, uint8 accessLevel) external returns (uint256)",
-  
+  "function registerProject(string title, string ipfsHash, uint256 departmentId, uint256 year, string description, uint8 accessLevel) external returns (uint256)",
+
   // Project Retrieval Functions
-  "function getProjectById(uint256 projectId) external view returns (tuple(uint256 id, string title, address[] authors, uint256 uploadDate, string ipfsHash, uint256 departmentId, uint256 year, string description, uint8 accessLevel))",
-  "function getProjectsByDepartment(uint256 departmentId) external view returns (uint256[])",
-  "function getProjectsByYear(uint256 year) external view returns (uint256[])",
-  "function getProjectsByAuthor(address author) external view returns (uint256[])",
-  
+  "function getProjectById(uint256 projectId) external view returns (uint256 projectId, string title, address[] authors, uint256 uploadDate, string ipfsHash, uint256 departmentId, uint256 year, string description, uint8 accessLevel)",
+  "function getProjectsByDepartment(uint256 departmentId, uint256 start, uint256 limit) external view returns (uint256[])",
+  "function getProjectsByYear(uint256 year, uint256 start, uint256 limit) external view returns (uint256[])",
+  "function getProjectsByAuthor(address author, uint256 start, uint256 limit) external view returns (uint256[])",
+  "function getTotalProjects() external view returns (uint256)",
+
   // Access Control Functions
   "function getProjectAccessLevel(uint256 projectId) external view returns (uint8)",
   "function setProjectAccessLevel(uint256 projectId, uint8 accessLevel) external",
-  "function canViewProject(uint256 projectId, address viewer) external view returns (bool)",
-  
+  "function canUserViewProject(uint256 projectId, address user) external view returns (bool)",
+
   // Institution Management Functions
-  "function addInstitution(string name) external returns (uint256)",
-  "function getInstitutions() external view returns (uint256[])",
-  "function getInstitutionName(uint256 institutionId) external view returns (string)",
-  "function addDepartment(uint256 institutionId, string name) external returns (uint256)",
-  "function getDepartments(uint256 institutionId) external view returns (uint256[])",
-  "function getDepartmentName(uint256 departmentId) external view returns (string)",
-  "function addInstitutionUser(uint256 institutionId, address user) external",
-  
+  "function getAllInstitutions() external view returns (uint256[] ids, string[] names)",
+  "function getDepartmentsByInstitution(uint256 institutionId) external view returns (uint256[] ids, string[] names)",
+  "function registerUserWithDepartment(address user, uint256 departmentId, bool isStudent) external",
+  "function setInstitutionalAdmin(address admin, bool isAdmin) external",
+  "function getUserInfo(address user) external view returns (bool isRegistered, bool isStudent, bool isAdmin, uint256 departmentId, uint256 institutionId)",
+  "function getStudentsByDepartment(uint256 departmentId) external view returns (address[])",
+  "function isInstitutionAdmin(address user, uint256 institutionId) external view returns (bool)",
+
   // Events
-  "event ProjectRegistered(uint256 indexed projectId, address indexed author, string title)",
-  "event AccessLevelChanged(uint256 indexed projectId, uint8 oldLevel, uint8 newLevel)"
+  "event ProjectRegistered(uint256 indexed projectId, string title, address indexed uploader, uint256 indexed departmentId, uint8 accessLevel, uint256 timestamp)",
+  "event AccessLevelChanged(uint256 indexed projectId, uint8 oldAccessLevel, uint8 newAccessLevel, address indexed changedBy, uint256 timestamp)",
+  "event DepartmentAdded(uint256 indexed departmentId, string name, uint256 indexed institutionId, address indexed addedBy, uint256 timestamp)",
+  "event InstitutionAdded(uint256 indexed institutionId, string name, address indexed addedBy, uint256 timestamp)",
+  "event UserRegistered(address indexed user, uint256 indexed departmentId, uint256 indexed institutionId, bool isStudent, address registeredBy, uint256 timestamp)"
 ];
 
 // Access level enum mapping
 export enum AccessLevel {
   Public = 0,
-  Restricted = 1, 
+  Restricted = 1,
   Private = 2
+}
+
+// Institution enum mapping
+export enum InstitutionEnum {
+  UniversityOfTechnology = 0,
+  StateUniversity = 1,
+  NationalCollege = 2,
+  TechnicalInstitute = 3,
+  MedicalUniversity = 4
+}
+
+// Department enum mapping
+export enum DepartmentEnum {
+  // University of Technology Departments (1-3)
+  ComputerScience = 0,
+  ElectricalEngineering = 1,
+  MechanicalEngineering = 2,
+
+  // State University Departments (4-6)
+  BusinessAdministration = 3,
+  Economics = 4,
+  Law = 5,
+
+  // National College Departments (7-9)
+  Mathematics = 6,
+  Physics = 7,
+  Chemistry = 8,
+
+  // Technical Institute Departments (10-12)
+  CivilEngineering = 9,
+  Architecture = 10,
+  UrbanPlanning = 11,
+
+  // Medical University Departments (13-15)
+  Medicine = 12,
+  Pharmacy = 13,
+  Nursing = 14
 }
 
 export interface ProjectData {
@@ -55,8 +96,21 @@ export interface Department {
   name: string;
 }
 
-// The address of the deployed contract (to be updated with actual address)
-const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+export interface Institution {
+  id: number;
+  name: string;
+}
+
+export interface UserInfo {
+  isRegistered: boolean;
+  isStudent: boolean;
+  isAdmin: boolean;
+  departmentId: number;
+  institutionId: number;
+}
+
+// The address of the deployed contract (from .env file)
+const CONTRACT_ADDRESS = "0xaF7993E02C51cb2c40837eE8c58750490112d3AE";
 
 // Connect to the provider (injected provider like MetaMask)
 export async function getProvider() {
@@ -65,7 +119,7 @@ export async function getProvider() {
     try {
       // Request account access if needed
       await window.ethereum.request({ method: 'eth_requestAccounts' });
-      
+
       return new ethers.BrowserProvider(window.ethereum);
     } catch (error) {
       console.error("User denied account access");
@@ -80,14 +134,14 @@ export async function getProvider() {
 export async function getContract() {
   const provider = await getProvider();
   const signer = await provider.getSigner();
-  
+
   return new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
 }
 
 // Get contract instance with provider (for read-only operations)
 export async function getContractReadOnly() {
   const provider = await getProvider();
-  
+
   return new ethers.Contract(CONTRACT_ADDRESS, contractABI, provider);
 }
 
@@ -101,29 +155,32 @@ export async function registerProject(
   accessLevel: AccessLevel
 ) {
   const contract = await getContract();
-  
+
   try {
     const tx = await contract.registerProject(
       title,
-      description,
       ipfsHash,
       departmentId,
       year,
+      description,
       accessLevel
     );
-    
+
     const receipt = await tx.wait();
-    
+
     // Find the ProjectRegistered event
     const event = receipt.logs
-      .filter(log => log.fragment?.name === 'ProjectRegistered')
+      .filter(log => {
+        const decoded = contract.interface.parseLog(log);
+        return decoded?.name === 'ProjectRegistered';
+      })
       .map(log => contract.interface.parseLog(log))[0];
-    
+
     if (event) {
       const projectId = event.args[0];
       return projectId;
     }
-    
+
     throw new Error("Failed to register project: Event not emitted");
   } catch (error) {
     console.error("Error registering project:", error);
@@ -134,7 +191,7 @@ export async function registerProject(
 // Get project by ID
 export async function getProjectById(projectId: number): Promise<ProjectData> {
   const contract = await getContractReadOnly();
-  
+
   try {
     const project = await contract.getProjectById(projectId);
     return {
@@ -157,7 +214,7 @@ export async function getProjectById(projectId: number): Promise<ProjectData> {
 // Get projects by department
 export async function getProjectsByDepartment(departmentId: number): Promise<number[]> {
   const contract = await getContractReadOnly();
-  
+
   try {
     const projectIds = await contract.getProjectsByDepartment(departmentId);
     return projectIds.map((id: ethers.BigNumberish) => Number(id));
@@ -170,7 +227,7 @@ export async function getProjectsByDepartment(departmentId: number): Promise<num
 // Get projects by year
 export async function getProjectsByYear(year: number): Promise<number[]> {
   const contract = await getContractReadOnly();
-  
+
   try {
     const projectIds = await contract.getProjectsByYear(year);
     return projectIds.map((id: ethers.BigNumberish) => Number(id));
@@ -183,7 +240,7 @@ export async function getProjectsByYear(year: number): Promise<number[]> {
 // Get projects by author
 export async function getProjectsByAuthor(author: string): Promise<number[]> {
   const contract = await getContractReadOnly();
-  
+
   try {
     const projectIds = await contract.getProjectsByAuthor(author);
     return projectIds.map((id: ethers.BigNumberish) => Number(id));
@@ -196,7 +253,7 @@ export async function getProjectsByAuthor(author: string): Promise<number[]> {
 // Change project access level
 export async function setProjectAccessLevel(projectId: number, accessLevel: AccessLevel) {
   const contract = await getContract();
-  
+
   try {
     const tx = await contract.setProjectAccessLevel(projectId, accessLevel);
     await tx.wait();
@@ -207,20 +264,43 @@ export async function setProjectAccessLevel(projectId: number, accessLevel: Acce
   }
 }
 
-// Get departments list
-export async function getDepartments(institutionId: number): Promise<Department[]> {
+// Get all institutions
+export async function getAllInstitutions(): Promise<Institution[]> {
   const contract = await getContractReadOnly();
-  
+
   try {
-    const departmentIds = await contract.getDepartments(institutionId);
-    
-    // Get department names
-    const departments: Department[] = [];
-    for (const id of departmentIds) {
-      const name = await contract.getDepartmentName(id);
-      departments.push({ id: Number(id), name });
+    const [ids, names] = await contract.getAllInstitutions();
+
+    const institutions: Institution[] = [];
+    for (let i = 0; i < ids.length; i++) {
+      institutions.push({
+        id: Number(ids[i]),
+        name: names[i]
+      });
     }
-    
+
+    return institutions;
+  } catch (error) {
+    console.error('Error getting institutions:', error);
+    throw error;
+  }
+}
+
+// Get departments for an institution
+export async function getDepartmentsByInstitution(institutionId: number): Promise<Department[]> {
+  const contract = await getContractReadOnly();
+
+  try {
+    const [ids, names] = await contract.getDepartmentsByInstitution(institutionId);
+
+    const departments: Department[] = [];
+    for (let i = 0; i < ids.length; i++) {
+      departments.push({
+        id: Number(ids[i]),
+        name: names[i]
+      });
+    }
+
     return departments;
   } catch (error) {
     console.error(`Error getting departments for institution ${institutionId}:`, error);
@@ -231,11 +311,83 @@ export async function getDepartments(institutionId: number): Promise<Department[
 // Check if a project can be viewed by the current user
 export async function canViewProject(projectId: number, address: string): Promise<boolean> {
   const contract = await getContractReadOnly();
-  
+
   try {
-    return await contract.canViewProject(projectId, address);
+    return await contract.canUserViewProject(projectId, address);
   } catch (error) {
     console.error(`Error checking view access for project ${projectId}:`, error);
+    return false;
+  }
+}
+
+// Get user information
+export async function getUserInfo(address: string): Promise<UserInfo> {
+  const contract = await getContractReadOnly();
+
+  try {
+    const [isRegistered, isStudent, isAdmin, departmentId, institutionId] = await contract.getUserInfo(address);
+
+    return {
+      isRegistered,
+      isStudent,
+      isAdmin,
+      departmentId: Number(departmentId),
+      institutionId: Number(institutionId)
+    };
+  } catch (error) {
+    console.error(`Error getting user info for ${address}:`, error);
+    throw error;
+  }
+}
+
+// Register a user with a department
+export async function registerUserWithDepartment(user: string, departmentId: number, isStudent: boolean): Promise<boolean> {
+  const contract = await getContract();
+
+  try {
+    const tx = await contract.registerUserWithDepartment(user, departmentId, isStudent);
+    await tx.wait();
+    return true;
+  } catch (error) {
+    console.error(`Error registering user with department:`, error);
+    throw error;
+  }
+}
+
+// Set a user as an institutional admin
+export async function setInstitutionalAdmin(admin: string, isAdmin: boolean): Promise<boolean> {
+  const contract = await getContract();
+
+  try {
+    const tx = await contract.setInstitutionalAdmin(admin, isAdmin);
+    await tx.wait();
+    return true;
+  } catch (error) {
+    console.error(`Error setting institutional admin:`, error);
+    throw error;
+  }
+}
+
+// Get students by department
+export async function getStudentsByDepartment(departmentId: number): Promise<string[]> {
+  const contract = await getContractReadOnly();
+
+  try {
+    return await contract.getStudentsByDepartment(departmentId);
+  } catch (error) {
+    console.error(`Error getting students for department ${departmentId}:`, error);
+    throw error;
+  }
+}
+
+// Check if a user is an admin for a specific institution
+export async function isInstitutionAdmin(user: string, institutionId: number): Promise<boolean> {
+  const contract = await getContractReadOnly();
+
+  try {
+    return await contract.isInstitutionAdmin(user, institutionId);
+  } catch (error) {
+    console.error(`Error checking if user ${user} is admin for institution ${institutionId}:`, error);
     return false;
   }
 }

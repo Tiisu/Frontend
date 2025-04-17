@@ -20,16 +20,16 @@ const ProjectDetailsPage: React.FC = () => {
   const [newAccessLevel, setNewAccessLevel] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
   const { address } = useWallet();
-  
+
   useEffect(() => {
     const fetchProject = async () => {
       setIsLoading(true);
-      
+
       try {
         // In a real app, this would fetch from the blockchain
         // For now, use mock data
         const foundProject = mockProjects.find(p => p.id === parseInt(id || '0'));
-        
+
         if (foundProject) {
           setProject(foundProject);
           setNewAccessLevel(foundProject.accessLevel.toString());
@@ -45,32 +45,32 @@ const ProjectDetailsPage: React.FC = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchProject();
   }, [id]);
-  
+
   // Check if the current user is an author of the project
   const isAuthor = address && project?.authors.some(
     author => author.toLowerCase() === address.toLowerCase()
   );
-  
+
   const handleAccessLevelChange = async () => {
     if (!project) return;
-    
+
     setIsUpdating(true);
-    
+
     try {
       await setProjectAccessLevel(
         project.id,
         parseInt(newAccessLevel) as AccessLevel
       );
-      
+
       // Update local state
       setProject({
         ...project,
         accessLevel: parseInt(newAccessLevel) as AccessLevel
       });
-      
+
       toast({
         title: "Access level updated",
         description: `Project access level has been changed to ${AccessLevel[parseInt(newAccessLevel)]}`,
@@ -86,7 +86,7 @@ const ProjectDetailsPage: React.FC = () => {
       setIsUpdating(false);
     }
   };
-  
+
   // Render access level badge with appropriate icon and color
   const renderAccessLevelBadge = (accessLevel: AccessLevel) => {
     switch(accessLevel) {
@@ -149,20 +149,20 @@ const ProjectDetailsPage: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         {/* Back to search link */}
         <div className="mb-4">
-          <Link 
-            to="/search" 
+          <Link
+            to="/search"
             className="text-university-blue hover:text-university-navy transition-colors flex items-center text-sm"
           >
             &larr; Back to search
           </Link>
         </div>
-        
+
         {/* Project header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold text-university-navy">{project.title}</h1>
           {renderAccessLevelBadge(project.accessLevel)}
         </div>
-        
+
         {/* Project metadata */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 mb-8">
           <div className="flex items-center gap-2">
@@ -170,28 +170,28 @@ const ProjectDetailsPage: React.FC = () => {
             <span className="text-gray-600 font-medium">Year:</span>
             <span>{project.year}</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Building className="h-5 w-5 text-university-blue" />
             <span className="text-gray-600 font-medium">Department:</span>
             <span>{mockDepartments.find(d => d.id === project.departmentId)?.name}</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-university-blue" />
             <span className="text-gray-600 font-medium">Upload Date:</span>
             <span>{new Date(project.uploadDate).toLocaleDateString()}</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Bookmark className="h-5 w-5 text-university-blue" />
             <span className="text-gray-600 font-medium">Project ID:</span>
             <span>#{project.id}</span>
           </div>
         </div>
-        
+
         <Separator className="my-6" />
-        
+
         {/* Project description */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4 text-university-navy">Description</h2>
@@ -199,46 +199,48 @@ const ProjectDetailsPage: React.FC = () => {
             <p className="text-gray-700 whitespace-pre-line">{project.description}</p>
           </div>
         </div>
-        
-        {/* IPFS link */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4 text-university-navy">Project Files</h2>
-          <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div>
-                <p className="font-medium">IPFS Hash:</p>
-                <code className="bg-gray-100 px-2 py-1 rounded text-gray-800">
-                  {project.ipfsHash}
-                </code>
-              </div>
-              
-              <a 
-                href={`https://ipfs.io/ipfs/${project.ipfsHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 rounded-md bg-university-blue text-white hover:bg-university-blue/90 transition-colors"
-              >
-                View on IPFS
-                <ExternalLink className="h-4 w-4 ml-2" />
-              </a>
-            </div>
-            
-            <div className="mt-4 bg-blue-50 p-4 rounded-md">
-              <p className="text-sm text-blue-800">
-                <strong>What is IPFS?</strong> The InterPlanetary File System is a distributed system for storing and accessing files. 
-                <a 
-                  href="https://ipfs.tech/" 
+
+        {/* Project Files section - only shown if IPFS hash exists */}
+        {project.ipfsHash && project.ipfsHash.trim() !== '' && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 text-university-navy">Project Files</h2>
+            <div className="bg-white p-6 rounded-lg border border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div>
+                  <p className="font-medium">IPFS Hash:</p>
+                  <code className="bg-gray-100 px-2 py-1 rounded text-gray-800">
+                    {project.ipfsHash}
+                  </code>
+                </div>
+
+                <a
+                  href={`https://ipfs.io/ipfs/${project.ipfsHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-university-blue hover:underline ml-1"
+                  className="inline-flex items-center px-4 py-2 rounded-md bg-university-blue text-white hover:bg-university-blue/90 transition-colors"
                 >
-                  Learn more about IPFS
+                  View on IPFS
+                  <ExternalLink className="h-4 w-4 ml-2" />
                 </a>
-              </p>
+              </div>
+
+              <div className="mt-4 bg-blue-50 p-4 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>What is IPFS?</strong> The InterPlanetary File System is a distributed system for storing and accessing files.
+                  <a
+                    href="https://ipfs.tech/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-university-blue hover:underline ml-1"
+                  >
+                    Learn more about IPFS
+                  </a>
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-        
+        )}
+
         {/* Authors section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4 text-university-navy">Authors</h2>
@@ -255,7 +257,7 @@ const ProjectDetailsPage: React.FC = () => {
                     {author}
                     <ExternalLink className="h-3 w-3 ml-1" />
                   </a>
-                  
+
                   {address && author.toLowerCase() === address.toLowerCase() && (
                     <Badge className="ml-2 bg-university-gold">You</Badge>
                   )}
@@ -264,7 +266,7 @@ const ProjectDetailsPage: React.FC = () => {
             </ul>
           </div>
         </div>
-        
+
         {/* Access control (for authors only) */}
         {isAuthor && (
           <div className="mb-8">
@@ -273,22 +275,22 @@ const ProjectDetailsPage: React.FC = () => {
               <p className="mb-4">
                 As an author of this project, you can change who has access to view it.
               </p>
-              
+
               <Dialog>
                 <DialogTrigger asChild>
                   <Button className="bg-university-blue hover:bg-university-blue/90 text-white">
                     Change Access Level
                   </Button>
                 </DialogTrigger>
-                
+
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Change Access Level</DialogTitle>
                   </DialogHeader>
-                  
+
                   <div className="py-4">
-                    <RadioGroup 
-                      value={newAccessLevel} 
+                    <RadioGroup
+                      value={newAccessLevel}
                       onValueChange={setNewAccessLevel}
                       className="flex flex-col space-y-4"
                     >
@@ -301,7 +303,7 @@ const ProjectDetailsPage: React.FC = () => {
                           </p>
                         </Label>
                       </div>
-                      
+
                       <div className="flex items-start space-x-3">
                         <RadioGroupItem value="1" id="access-restricted" />
                         <Label htmlFor="access-restricted" className="font-medium cursor-pointer">
@@ -311,7 +313,7 @@ const ProjectDetailsPage: React.FC = () => {
                           </p>
                         </Label>
                       </div>
-                      
+
                       <div className="flex items-start space-x-3">
                         <RadioGroupItem value="2" id="access-private" />
                         <Label htmlFor="access-private" className="font-medium cursor-pointer">
@@ -323,10 +325,10 @@ const ProjectDetailsPage: React.FC = () => {
                       </div>
                     </RadioGroup>
                   </div>
-                  
+
                   <DialogFooter>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={handleAccessLevelChange}
                       disabled={isUpdating || newAccessLevel === project.accessLevel.toString()}
                     >
