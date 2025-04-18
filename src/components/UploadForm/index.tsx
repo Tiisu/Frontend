@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AccessLevel, registerProject, getAllInstitutions, getDepartmentsByInstitution, Institution, Department } from '@/lib/blockchain';
+import { AccessLevel, Institution, Department, InstitutionEnum, DepartmentEnum } from '@/lib/blockchain';
+import { mockInstitutions, mockDepartmentsByInstitution } from '@/components/InstitutionData';
+import { createProject, addProject } from '@/services/projectService';
 import { toast } from '@/components/ui/use-toast';
 import FileUpload from '@/components/FileUpload';
 
@@ -54,29 +56,12 @@ const UploadForm: React.FC = () => {
   const [selectedInstitutionId, setSelectedInstitutionId] = useState<string>('');
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoadingInstitutions, setIsLoadingInstitutions] = useState<boolean>(false);
-  const [isLoadingDepartments, setIsLoadingDepartments] = useState<boolean>(false);
+  // No loading states needed for mock data
 
-  // Load institutions when component mounts
+  // Load mock institutions when component mounts
   useEffect(() => {
-    const loadInstitutions = async () => {
-      setIsLoadingInstitutions(true);
-      try {
-        const institutionsList = await getAllInstitutions();
-        setInstitutions(institutionsList);
-      } catch (error) {
-        console.error('Error loading institutions:', error);
-        toast({
-          title: "Error loading institutions",
-          description: "Failed to load institutions from the blockchain",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingInstitutions(false);
-      }
-    };
-
-    loadInstitutions();
+    // Use mock institutions data
+    setInstitutions(mockInstitutions);
   }, []);
 
   // Load departments when institution is selected
@@ -86,24 +71,10 @@ const UploadForm: React.FC = () => {
       return;
     }
 
-    const loadDepartments = async () => {
-      setIsLoadingDepartments(true);
-      try {
-        const departmentsList = await getDepartmentsByInstitution(parseInt(selectedInstitutionId));
-        setDepartments(departmentsList);
-      } catch (error) {
-        console.error(`Error loading departments for institution ${selectedInstitutionId}:`, error);
-        toast({
-          title: "Error loading departments",
-          description: "Failed to load departments from the blockchain",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingDepartments(false);
-      }
-    };
-
-    loadDepartments();
+    // Use mock departments data
+    const institutionId = parseInt(selectedInstitutionId);
+    const departmentsList = mockDepartmentsByInstitution[institutionId] || [];
+    setDepartments(departmentsList);
   }, [selectedInstitutionId]);
 
   const validateForm = (): boolean => {
@@ -158,23 +129,37 @@ const UploadForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const projectId = await registerProject(
+      // Get the selected institution and department for the success message
+      const institution = institutions.find(inst => inst.id.toString() === selectedInstitutionId);
+      const department = departments.find(dept => dept.id.toString() === formData.departmentId);
+
+      // Create a new project with the form data
+      const newProject = createProject(
         formData.title,
         formData.description,
-        formData.ipfsHash, // Now using the IPFS hash from Pinata
         parseInt(formData.departmentId),
         parseInt(formData.year),
-        parseInt(formData.accessLevel) as AccessLevel
+        parseInt(formData.accessLevel) as AccessLevel,
+        formData.ipfsHash,
+        address // Use the connected wallet address as the author
       );
 
-      toast({
-        title: "Project uploaded successfully!",
-        description: `Your project has been registered with ID: ${projectId}`,
-        variant: "default",
-      });
+      // Add the project to our store
+      addProject(newProject);
 
-      // Redirect to the new project page
-      navigate(`/project/${projectId}`);
+      // Simulate a delay for better UX
+      setTimeout(() => {
+        toast({
+          title: "Project uploaded successfully!",
+          description: `Your project "${formData.title}" has been registered with ID: ${newProject.id} in ${department?.name} at ${institution?.name}`,
+          variant: "default",
+        });
+
+        // Redirect to the home page to see the new project
+        navigate('/');
+
+        setIsSubmitting(false);
+      }, 1500);
     } catch (error) {
       console.error('Error submitting project:', error);
       toast({
@@ -182,7 +167,6 @@ const UploadForm: React.FC = () => {
         description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -247,24 +231,19 @@ const UploadForm: React.FC = () => {
                 // Reset department when institution changes
                 setFormData({ ...formData, departmentId: '' });
               }}
-              disabled={isSubmitting || isLoadingInstitutions}
+              disabled={isSubmitting}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select institution" />
               </SelectTrigger>
               <SelectContent>
-                {isLoadingInstitutions ? (
-                  <div className="flex items-center justify-center p-2">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Loading...
-                  </div>
-                ) : (
+                {
                   institutions.map(institution => (
                     <SelectItem key={institution.id} value={institution.id.toString()}>
                       {institution.name}
                     </SelectItem>
                   ))
-                )}
+}
               </SelectContent>
             </Select>
           </div>
@@ -281,18 +260,13 @@ const UploadForm: React.FC = () => {
                   setErrors({ ...errors, departmentId: undefined });
                 }
               }}
-              disabled={isSubmitting || !selectedInstitutionId || isLoadingDepartments}
+              disabled={isSubmitting || !selectedInstitutionId}
             >
               <SelectTrigger className={errors.departmentId ? "border-red-500" : ""}>
                 <SelectValue placeholder="Select department" />
               </SelectTrigger>
               <SelectContent>
-                {isLoadingDepartments ? (
-                  <div className="flex items-center justify-center p-2">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Loading...
-                  </div>
-                ) : departments.length > 0 ? (
+                {departments.length > 0 ? (
                   departments.map(dept => (
                     <SelectItem key={dept.id} value={dept.id.toString()}>
                       {dept.name}

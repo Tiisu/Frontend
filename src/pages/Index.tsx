@@ -4,18 +4,39 @@ import { Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import ProjectCard from '@/components/ProjectCard';
 import { Button } from '@/components/ui/button';
-import { ProjectData, mockProjects } from '@/lib/blockchain';
+import { ProjectData } from '@/lib/blockchain';
+import { getAllProjects } from '@/services/projectService';
 import { ArrowRight, Upload } from 'lucide-react';
 
 const Index: React.FC = () => {
   const [featuredProjects, setFeaturedProjects] = useState<ProjectData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // In a real app, this would fetch data from the blockchain
-    // For now, we'll use mock data
-    setFeaturedProjects(mockProjects);
+  // Function to load projects
+  const loadProjects = () => {
+    setIsLoading(true);
+    // Get projects from our project service
+    const projects = getAllProjects();
+    // Sort projects by upload date (newest first)
+    const sortedProjects = [...projects].sort((a, b) => b.uploadDate - a.uploadDate);
+    setFeaturedProjects(sortedProjects);
     setIsLoading(false);
+  };
+
+  // Load projects when component mounts
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  // Also load projects when the component is focused (e.g., after navigation)
+  useEffect(() => {
+    // This will refresh the projects when the user navigates back to this page
+    const handleFocus = () => loadProjects();
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   return (
@@ -73,6 +94,19 @@ const Index: React.FC = () => {
                 className="bg-gray-100 rounded-lg p-6 h-64"
               ></div>
             ))}
+          </div>
+        ) : featuredProjects.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-lg">
+            <h3 className="text-xl font-medium text-gray-600 mb-2">No projects yet</h3>
+            <p className="text-gray-500 mb-4">Be the first to upload a project!</p>
+            <Button
+              asChild
+              className="bg-university-blue hover:bg-university-blue/90"
+            >
+              <Link to="/upload">
+                <Upload className="mr-2 h-4 w-4" /> Upload Project
+              </Link>
+            </Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

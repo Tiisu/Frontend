@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import ProjectCard from '@/components/ProjectCard';
 import { useWallet } from '@/context/WalletContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +10,11 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Lock, Globe, Users, ExternalLink, Calendar, Building, Bookmark, Clock } from 'lucide-react';
+import { Loader2, Lock, Globe, Users, ExternalLink, Calendar, Building, Bookmark, Clock, Share2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { AccessLevel, ProjectData, mockProjects, setProjectAccessLevel, mockDepartments } from '@/lib/blockchain';
+import { AccessLevel, ProjectData } from '@/lib/blockchain';
+import { getProjectById, updateProject, getAllProjects } from '@/services/projectService';
+import { mockDepartmentsByInstitution, mockInstitutions } from '@/components/InstitutionData';
 import { getIpfsGatewayUrl } from '@/lib/pinata';
 
 const ProjectDetailsPage: React.FC = () => {
@@ -22,32 +25,33 @@ const ProjectDetailsPage: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const { address } = useWallet();
 
-  useEffect(() => {
-    const fetchProject = async () => {
-      setIsLoading(true);
+  // Function to load project data
+  const loadProject = () => {
+    setIsLoading(true);
 
-      try {
-        // In a real app, this would fetch from the blockchain
-        // For now, use mock data
-        const foundProject = mockProjects.find(p => p.id === parseInt(id || '0'));
+    try {
+      const projectId = parseInt(id || '0');
+      const foundProject = getProjectById(projectId);
 
-        if (foundProject) {
-          setProject(foundProject);
-          setNewAccessLevel(foundProject.accessLevel.toString());
-        }
-      } catch (error) {
-        console.error('Error fetching project:', error);
-        toast({
-          title: "Error loading project",
-          description: "Failed to load project details",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+      if (foundProject) {
+        setProject(foundProject);
+        setNewAccessLevel(foundProject.accessLevel.toString());
       }
-    };
+    } catch (error) {
+      console.error('Error fetching project:', error);
+      toast({
+        title: "Error loading project",
+        description: "Failed to load project details",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchProject();
+  // Load project when component mounts or ID changes
+  useEffect(() => {
+    loadProject();
   }, [id]);
 
   // Check if the current user is an author of the project
@@ -61,16 +65,17 @@ const ProjectDetailsPage: React.FC = () => {
     setIsUpdating(true);
 
     try {
-      await setProjectAccessLevel(
-        project.id,
-        parseInt(newAccessLevel) as AccessLevel
-      );
-
-      // Update local state
-      setProject({
+      // Create updated project with new access level
+      const updatedProject = {
         ...project,
         accessLevel: parseInt(newAccessLevel) as AccessLevel
-      });
+      };
+
+      // Update the project in our store
+      updateProject(updatedProject);
+
+      // Update local state
+      setProject(updatedProject);
 
       toast({
         title: "Access level updated",
@@ -161,7 +166,25 @@ const ProjectDetailsPage: React.FC = () => {
         {/* Project header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold text-university-navy">{project.title}</h1>
-          {renderAccessLevelBadge(project.accessLevel)}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1 text-gray-600"
+              onClick={() => {
+                // Copy the current URL to clipboard
+                navigator.clipboard.writeText(window.location.href);
+                toast({
+                  title: "Link copied",
+                  description: "Project link copied to clipboard",
+                });
+              }}
+            >
+              <Share2 className="h-4 w-4" />
+              Share
+            </Button>
+            {renderAccessLevelBadge(project.accessLevel)}
+          </div>
         </div>
 
         {/* Project metadata */}
@@ -175,7 +198,20 @@ const ProjectDetailsPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Building className="h-5 w-5 text-university-blue" />
             <span className="text-gray-600 font-medium">Department:</span>
-            <span>{mockDepartments.find(d => d.id === project.departmentId)?.name}</span>
+            <span>
+              {(() => {
+                // Find the department name by searching through all institutions
+                for (const institutionId in mockDepartmentsByInstitution) {
+                  const departments = mockDepartmentsByInstitution[parseInt(institutionId)];
+                  const department = departments.find(d => d.id === project.departmentId);
+                  if (department) {
+                    const institution = mockInstitutions.find(i => i.id === parseInt(institutionId));
+                    return `${department.name} (${institution?.name})`;
+                  }
+                }
+                return 'Unknown Department';
+              })()}
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -356,6 +392,35 @@ const ProjectDetailsPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Related Projects */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4 text-university-navy">Related Projects</h2>
+
+          {(() => {
+            // Get all projects from the same department
+            const allProjects = getAllProjects();
+            const relatedProjects = allProjects
+              .filter(p => p.departmentId === project.departmentId && p.id !== project.id)
+              .slice(0, 3); // Limit to 3 related projects
+
+            if (relatedProjects.length === 0) {
+              return (
+                <div className="bg-gray-50 p-6 rounded-lg text-center">
+                  <p className="text-gray-600">No related projects found from this department.</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {relatedProjects.map(relatedProject => (
+                  <ProjectCard key={relatedProject.id} project={relatedProject} />
+                ))}
+              </div>
+            );
+          })()}
+        </div>
       </div>
     </Layout>
   );

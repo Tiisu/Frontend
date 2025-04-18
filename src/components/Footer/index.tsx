@@ -35,6 +35,11 @@ const Footer: React.FC = () => {
                   Upload Project
                 </Link>
               </li>
+              <li>
+                <Link to="/institutions" className="text-gray-300 hover:text-university-gold transition-colors">
+                  Institutions
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -42,9 +47,9 @@ const Footer: React.FC = () => {
             <h3 className="text-xl font-semibold mb-4 text-university-gold">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <a 
-                  href="https://ipfs.tech/" 
-                  target="_blank" 
+                <a
+                  href="https://ipfs.tech/"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-300 hover:text-university-gold transition-colors"
                 >
@@ -52,9 +57,9 @@ const Footer: React.FC = () => {
                 </a>
               </li>
               <li>
-                <a 
-                  href="https://ethereum.org/" 
-                  target="_blank" 
+                <a
+                  href="https://ethereum.org/"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-300 hover:text-university-gold transition-colors"
                 >
@@ -62,9 +67,9 @@ const Footer: React.FC = () => {
                 </a>
               </li>
               <li>
-                <a 
-                  href="https://metamask.io/" 
-                  target="_blank" 
+                <a
+                  href="https://metamask.io/"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-300 hover:text-university-gold transition-colors"
                 >
