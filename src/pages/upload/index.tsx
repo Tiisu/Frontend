@@ -59,6 +59,9 @@ const UploadPage: React.FC = () => {
               <span className="font-medium">Connect your wallet:</span> Use the "Connect Wallet" button in the upper right corner to connect your Ethereum wallet.
             </li>
             <li className="text-gray-700">
+              <span className="font-medium">Upload your project files:</span> Use the file upload section to upload your project files. We use Pinata for IPFS storage to ensure your files are securely stored on the decentralized web.
+            </li>
+            <li className="text-gray-700">
               <span className="font-medium">Fill out the form:</span> Complete all required fields with your project details.
             </li>
             <li className="text-gray-700">

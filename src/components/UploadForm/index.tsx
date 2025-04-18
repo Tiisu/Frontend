@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AccessLevel, registerProject, getAllInstitutions, getDepartmentsByInstitution, Institution, Department } from '@/lib/blockchain';
 import { toast } from '@/components/ui/use-toast';
+import FileUpload from '@/components/FileUpload';
 
 interface FormData {
   title: string;
@@ -19,6 +20,7 @@ interface FormData {
   departmentId: string;
   year: string;
   accessLevel: string;
+  ipfsHash: string;
 }
 
 interface FormErrors {
@@ -43,6 +45,7 @@ const UploadForm: React.FC = () => {
     departmentId: '',
     year: currentYear.toString(),
     accessLevel: '0', // Default to public
+    ipfsHash: '',
   });
 
   // State for institutions and departments
@@ -158,7 +161,7 @@ const UploadForm: React.FC = () => {
       const projectId = await registerProject(
         formData.title,
         formData.description,
-        "", // Empty string for IPFS hash
+        formData.ipfsHash, // Now using the IPFS hash from Pinata
         parseInt(formData.departmentId),
         parseInt(formData.year),
         parseInt(formData.accessLevel) as AccessLevel
@@ -187,6 +190,15 @@ const UploadForm: React.FC = () => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md border border-university-blue/10">
       <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-4 mb-6">
+          <h3 className="text-lg font-semibold">Project Files</h3>
+          <FileUpload
+            onUploadComplete={(hash) => setFormData({ ...formData, ipfsHash: hash })}
+            maxSizeMB={50}
+            acceptedFileTypes={['application/pdf', 'application/zip', 'application/x-zip-compressed']}
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="title" className="text-lg font-medium">
             Project Title

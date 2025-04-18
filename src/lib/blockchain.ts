@@ -110,7 +110,7 @@ export interface UserInfo {
 }
 
 // The address of the deployed contract (from .env file)
-const CONTRACT_ADDRESS = "0xaF7993E02C51cb2c40837eE8c58750490112d3AE";
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0xaF7993E02C51cb2c40837eE8c58750490112d3AE";
 
 // Connect to the provider (injected provider like MetaMask)
 export async function getProvider() {

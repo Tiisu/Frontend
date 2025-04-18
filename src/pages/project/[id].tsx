@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Lock, Globe, Users, ExternalLink, Calendar, Building, Bookmark, Clock } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { AccessLevel, ProjectData, mockProjects, setProjectAccessLevel, mockDepartments } from '@/lib/blockchain';
+import { getIpfsGatewayUrl } from '@/lib/pinata';
 
 const ProjectDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -214,7 +215,7 @@ const ProjectDetailsPage: React.FC = () => {
                 </div>
 
                 <a
-                  href={`https://ipfs.io/ipfs/${project.ipfsHash}`}
+                  href={getIpfsGatewayUrl(project.ipfsHash)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center px-4 py-2 rounded-md bg-university-blue text-white hover:bg-university-blue/90 transition-colors"
@@ -227,6 +228,14 @@ const ProjectDetailsPage: React.FC = () => {
               <div className="mt-4 bg-blue-50 p-4 rounded-md">
                 <p className="text-sm text-blue-800">
                   <strong>What is IPFS?</strong> The InterPlanetary File System is a distributed system for storing and accessing files.
+                  We use <a
+                    href="https://pinata.cloud/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-university-blue hover:underline"
+                  >
+                    Pinata
+                  </a> to store your files on IPFS.
                   <a
                     href="https://ipfs.tech/"
                     target="_blank"
