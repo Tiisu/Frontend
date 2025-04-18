@@ -7,7 +7,7 @@ import ProjectCard from '@/components/ProjectCard';
 import { Button } from '@/components/ui/button';
 import { ProjectData } from '@/lib/blockchain';
 import { getAllProjects } from '@/services/projectService';
-import { ArrowRight, Upload } from 'lucide-react';
+import { ArrowRight, Upload, Sparkles } from 'lucide-react';
 
 const Index: React.FC = () => {
   const [featuredProjects, setFeaturedProjects] = useState<ProjectData[]>([]);
@@ -22,6 +22,7 @@ const Index: React.FC = () => {
     // Sort projects by upload date (newest first)
     const sortedProjects = [...projects].sort((a, b) => b.uploadDate - a.uploadDate);
     setFeaturedProjects(sortedProjects);
+
     setIsLoading(false);
   };
 
@@ -125,7 +126,7 @@ const Index: React.FC = () => {
           How It Works
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-md text-center">
             <div className="bg-university-blue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
               <Upload className="h-8 w-8 text-university-blue" />
@@ -163,6 +164,18 @@ const Index: React.FC = () => {
             </h3>
             <p className="text-gray-600">
               Browse and search for projects based on department, year, and other criteria
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <div className="bg-university-blue/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="h-8 w-8 text-university-gold" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-university-navy">
+              AI Insights
+            </h3>
+            <p className="text-gray-600">
+              Get AI-powered explanations and insights for any project to enhance your understanding.
             </p>
           </div>
         </div>

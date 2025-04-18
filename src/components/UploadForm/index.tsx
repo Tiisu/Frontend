@@ -37,9 +37,14 @@ const UploadForm: React.FC = () => {
   const navigate = useNavigate();
   const { isConnected, address } = useWallet();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [transactionStatus, setTransactionStatus] = useState<'idle' | 'pending' | 'confirming' | 'success' | 'error'>('idle');
+  const [transactionStatus, setTransactionStatus] = useState<'idle' | 'pending' | 'confirming' | 'ai-processing' | 'success' | 'error'>('idle');
   const [transactionHash, setTransactionHash] = useState<string>('');
   const [gasEstimate, setGasEstimate] = useState<{gas: string, price: string, total: string} | null>(null);
+
+  // State for MetaMask popup
+  const [showMetaMaskPopup, setShowMetaMaskPopup] = useState(false);
+  const [pendingProject, setPendingProject] = useState<any>(null);
+  const [estimatedGasFee, setEstimatedGasFee] = useState('');
 
   // Generate year options (last 10 years)
   const currentYear = new Date().getFullYear();
@@ -124,11 +129,6 @@ const UploadForm: React.FC = () => {
     return hash;
   };
 
-  // State for MetaMask popup
-  const [showMetaMaskPopup, setShowMetaMaskPopup] = useState(false);
-  const [pendingProject, setPendingProject] = useState<any>(null);
-  const [estimatedGasFee, setEstimatedGasFee] = useState('');
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -144,8 +144,6 @@ const UploadForm: React.FC = () => {
     if (!validateForm()) {
       return;
     }
-
-    // We'll get the department name later when showing the MetaMask popup
 
     // Create a new project with the form data
     const newProject = createProject(
@@ -223,8 +221,20 @@ const UploadForm: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 2000));
       setTransactionStatus('success');
 
-      // Add the project to our store
-      addProject(newProject);
+      // Update status to AI processing
+      setTransactionStatus('ai-processing');
+
+      // Show AI generation toast
+      toast({
+        title: "Generating AI Summary",
+        description: "Creating an AI-powered summary of your project...",
+      });
+
+      // Add the project to our store (this will also generate the AI summary)
+      await addProject(newProject);
+
+      // Update status to success
+      setTransactionStatus('success');
 
       // Show success toast
       toast({
@@ -262,7 +272,7 @@ const UploadForm: React.FC = () => {
           onConfirm={handleConfirmTransaction}
           onReject={() => setShowMetaMaskPopup(false)}
           data={{
-            title: pendingProject?.title || '',
+            title: formData.title || '',
             department: departments.find(d => d.id.toString() === formData.departmentId)?.name || '',
             accessLevel: AccessLevel[parseInt(formData.accessLevel) as AccessLevel],
             gasEstimate: estimatedGasFee
@@ -470,6 +480,12 @@ const UploadForm: React.FC = () => {
                   <span className="text-amber-700">Confirming Transaction</span>
                 </>
               )}
+              {transactionStatus === 'ai-processing' && (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 text-purple-500 animate-spin" />
+                  <span className="text-purple-700">Generating AI Summary</span>
+                </>
+              )}
               {transactionStatus === 'success' && (
                 <>
                   <CheckCircle2 className="mr-2 h-5 w-5 text-green-500" />
@@ -517,11 +533,14 @@ const UploadForm: React.FC = () => {
               </div>
             )}
 
-            {(transactionStatus === 'pending' || transactionStatus === 'confirming') && (
+            {(transactionStatus === 'pending' || transactionStatus === 'confirming' || transactionStatus === 'ai-processing') && (
               <>
                 <div className="mt-3 bg-white rounded-full h-2 overflow-hidden">
                   <div
-                    className={`h-full ${transactionStatus === 'pending' ? 'w-1/3' : 'w-2/3'} bg-blue-500 animate-pulse`}
+                    className={`h-full ${transactionStatus === 'pending' ? 'w-1/4' :
+                      transactionStatus === 'confirming' ? 'w-2/4' :
+                      transactionStatus === 'ai-processing' ? 'w-3/4' : 'w-full'}
+                      ${transactionStatus === 'ai-processing' ? 'bg-purple-500' : 'bg-blue-500'} animate-pulse`}
                   ></div>
                 </div>
 
@@ -556,7 +575,8 @@ const UploadForm: React.FC = () => {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               {transactionStatus === 'pending' ? 'Initiating Transaction...' :
                transactionStatus === 'confirming' ? 'Confirming Transaction...' :
-               transactionStatus === 'success' ? 'Transaction Complete' : 'Uploading...'}
+               transactionStatus === 'ai-processing' ? 'Generating AI Summary...' :
+               transactionStatus === 'success' ? 'Complete' : 'Uploading...'}
             </>
           ) : (
             'Upload Project'

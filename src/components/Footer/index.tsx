@@ -58,6 +58,16 @@ const Footer: React.FC = () => {
               </li>
               <li>
                 <a
+                  href="https://apechain.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-300 hover:text-university-gold transition-colors"
+                >
+                  lEARN MORE APECHAIN
+                </a>
+              </li>
+              <li>
+                <a
                   href="https://ethereum.org/"
                   target="_blank"
                   rel="noopener noreferrer"

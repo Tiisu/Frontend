@@ -89,6 +89,7 @@ export interface ProjectData {
   year: number;
   description: string;
   accessLevel: AccessLevel;
+  aiSummary?: string;
 }
 
 export interface Department {

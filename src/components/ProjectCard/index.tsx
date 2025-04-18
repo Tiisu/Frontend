@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useWallet } from '@/context/WalletContext';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Globe, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Lock, Globe, Users, Sparkles, ExternalLink } from 'lucide-react';
 import { AccessLevel, ProjectData } from '@/lib/blockchain';
 
 interface ProjectCardProps {
@@ -104,14 +105,30 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
         <p className="text-gray-700">{truncatedDescription}</p>
       </CardContent>
 
-      <CardFooter className="pt-2 flex flex-wrap justify-between border-t text-sm text-gray-500">
-        <div className="flex items-center">
-          <Badge variant="outline" className="bg-university-light text-university-navy">
-            {year}
-          </Badge>
+      <CardFooter className="pt-2 flex flex-col gap-3 border-t">
+        <div className="flex flex-wrap justify-between text-sm text-gray-500">
+          <div className="flex items-center">
+            <Badge variant="outline" className="bg-university-light text-university-navy">
+              {year}
+            </Badge>
+          </div>
+          <div>
+            Uploaded {formattedDate}
+          </div>
         </div>
-        <div>
-          Uploaded {formattedDate}
+
+        <div className="flex items-center justify-between">
+          <Link to={`/project/${id}`}>
+            <Button variant="outline" size="sm" className="text-university-blue border-university-blue hover:bg-university-blue/10">
+              View Details
+            </Button>
+          </Link>
+          <Link to={`/project/${id}#ai-insights`}>
+            <Button variant="outline" size="sm" className="text-university-gold border-university-gold hover:bg-university-gold/10 flex items-center">
+              <Sparkles className="h-3 w-3 mr-1" />
+              AI Insights
+            </Button>
+          </Link>
         </div>
       </CardFooter>
     </Card>

@@ -10,10 +10,13 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Lock, Globe, Users, ExternalLink, Calendar, Building, Bookmark, Clock, Share2 } from 'lucide-react';
+import { Loader2, Lock, Globe, Users, ExternalLink, Calendar, Building, Bookmark, Clock, Share2, Sparkles } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { AccessLevel, ProjectData } from '@/lib/blockchain';
 import { getProjectById, updateProject, getAllProjects, getAllProjectsAdmin } from '@/services/projectService';
+import AIExplanation from '@/components/AIExplanation';
+import AIChat from '@/components/AIChat';
+import ReactMarkdown from 'react-markdown';
 import { mockDepartmentsByInstitution, mockInstitutions } from '@/components/InstitutionData';
 import { getIpfsGatewayUrl } from '@/lib/pinata';
 
@@ -257,6 +260,21 @@ const ProjectDetailsPage: React.FC = () => {
           </div>
         </div>
 
+        {/* AI Summary (if available) */}
+        {project.aiSummary && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 text-university-navy flex items-center">
+              <Sparkles className="mr-2 h-5 w-5 text-university-gold" />
+              AI Summary
+            </h2>
+            <div className="bg-white p-6 rounded-lg border border-gray-200">
+              <div className="prose max-w-none">
+                <ReactMarkdown>{project.aiSummary}</ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Project Files section - only shown if IPFS hash exists */}
         {project.ipfsHash && project.ipfsHash.trim() !== '' && (
           <div className="mb-8">
@@ -413,6 +431,16 @@ const ProjectDetailsPage: React.FC = () => {
           </div>
         )}
 
+
+        {/* AI Explanations */}
+        <div id="ai-insights" className="mb-8 scroll-mt-20">
+          <h2 className="text-2xl font-bold mb-4 text-university-navy flex items-center">
+            <Sparkles className="mr-2 h-5 w-5 text-university-gold" />
+            AI Insights
+          </h2>
+          <AIExplanation project={project} />
+        </div>
+
         {/* Related Projects */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4 text-university-navy">Related Projects</h2>
@@ -442,6 +470,7 @@ const ProjectDetailsPage: React.FC = () => {
           })()}
         </div>
       </div>
+      {project && <AIChat project={project} />}
     </Layout>
   );
 };

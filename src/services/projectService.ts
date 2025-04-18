@@ -1,4 +1,5 @@
 import { ProjectData, AccessLevel, mockProjects } from '@/lib/blockchain';
+import { generateProjectSummary } from './geminiService';
 import { useWallet } from '@/context/WalletContext';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -62,7 +63,8 @@ export const createProject = (
   // Use provided author address or generate a mock one
   const author = authorAddress || `0x${Math.random().toString(16).substring(2, 42)}`;
 
-  return {
+  // Create the project object
+  const project: ProjectData = {
     id: newId,
     title,
     description,
@@ -73,10 +75,26 @@ export const createProject = (
     authors: [author],
     uploadDate: Date.now()
   };
+
+  return project;
 };
 
 // Add a new project to the store
-export const addProject = (project: ProjectData): void => {
+export const addProject = async (project: ProjectData): Promise<void> => {
+  try {
+    // Generate AI summary for the project if it doesn't already have one
+    if (!project.aiSummary) {
+      const summary = await generateProjectSummary(project);
+      if (summary) {
+        project.aiSummary = summary;
+      }
+    }
+  } catch (error) {
+    console.error('Error generating AI summary:', error);
+    // Continue without summary if there's an error
+  }
+
+  // Add the project to the store
   useProjectStore.getState().addProject(project);
 };
 
