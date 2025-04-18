@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { InfoIcon, Loader2 } from 'lucide-react';
+import { InfoIcon, Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AccessLevel, Institution, Department, InstitutionEnum, DepartmentEnum } from '@/lib/blockchain';
+import MetaMaskPopup from '@/components/MetaMaskPopup';
+import { AccessLevel, Institution, Department } from '@/lib/blockchain';
 import { mockInstitutions, mockDepartmentsByInstitution } from '@/components/InstitutionData';
 import { createProject, addProject } from '@/services/projectService';
 import { toast } from '@/components/ui/use-toast';
@@ -36,6 +37,9 @@ const UploadForm: React.FC = () => {
   const navigate = useNavigate();
   const { isConnected, address } = useWallet();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState<'idle' | 'pending' | 'confirming' | 'success' | 'error'>('idle');
+  const [transactionHash, setTransactionHash] = useState<string>('');
+  const [gasEstimate, setGasEstimate] = useState<{gas: string, price: string, total: string} | null>(null);
 
   // Generate year options (last 10 years)
   const currentYear = new Date().getFullYear();
@@ -110,6 +114,21 @@ const UploadForm: React.FC = () => {
     }
   };
 
+  // Generate a random transaction hash
+  const generateTransactionHash = () => {
+    const characters = '0123456789abcdef';
+    let hash = '0x';
+    for (let i = 0; i < 64; i++) {
+      hash += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return hash;
+  };
+
+  // State for MetaMask popup
+  const [showMetaMaskPopup, setShowMetaMaskPopup] = useState(false);
+  const [pendingProject, setPendingProject] = useState<any>(null);
+  const [estimatedGasFee, setEstimatedGasFee] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -126,42 +145,104 @@ const UploadForm: React.FC = () => {
       return;
     }
 
+    // We'll get the department name later when showing the MetaMask popup
+
+    // Create a new project with the form data
+    const newProject = createProject(
+      formData.title,
+      formData.description,
+      parseInt(formData.departmentId),
+      parseInt(formData.year),
+      parseInt(formData.accessLevel) as AccessLevel,
+      formData.ipfsHash,
+      address // Use the connected wallet address as the author
+    );
+
+    // Store the project for later use
+    setPendingProject(newProject);
+
+    // Generate a random gas fee estimate
+    const gasEstimate = `${((Math.random() * 0.005) + 0.001).toFixed(6)} ETH`;
+    setEstimatedGasFee(gasEstimate);
+
+    // Show MetaMask popup
+    setShowMetaMaskPopup(true);
+  };
+
+  // Function to handle the actual transaction after wallet confirmation
+  const handleConfirmTransaction = async () => {
+    if (!pendingProject) return;
+
+    // Close the MetaMask popup
+    setShowMetaMaskPopup(false);
+
+    // Start the transaction process
     setIsSubmitting(true);
+    setTransactionStatus('pending');
 
     try {
       // Get the selected institution and department for the success message
       const institution = institutions.find(inst => inst.id.toString() === selectedInstitutionId);
       const department = departments.find(dept => dept.id.toString() === formData.departmentId);
 
-      // Create a new project with the form data
-      const newProject = createProject(
-        formData.title,
-        formData.description,
-        parseInt(formData.departmentId),
-        parseInt(formData.year),
-        parseInt(formData.accessLevel) as AccessLevel,
-        formData.ipfsHash,
-        address // Use the connected wallet address as the author
-      );
+      // Use the pending project that was created earlier
+      const newProject = pendingProject;
+
+      // Simulate a blockchain transaction
+      const txHash = generateTransactionHash();
+      setTransactionHash(txHash);
+
+      // Simulate gas estimation
+      const gasLimit = Math.floor(Math.random() * 50000) + 150000; // Between 150,000 and 200,000
+      const gasPrice = (Math.random() * 20 + 30).toFixed(2); // Between 30 and 50 Gwei
+      const totalEth = ((gasLimit * parseFloat(gasPrice)) / 1e9).toFixed(6); // Convert to ETH
+
+      setGasEstimate({
+        gas: gasLimit.toLocaleString(),
+        price: `${gasPrice} Gwei`,
+        total: `${totalEth} ETH`
+      });
+
+      // Show transaction pending toast
+      toast({
+        title: "Transaction Initiated",
+        description: "Your project is being submitted to the blockchain...",
+      });
+
+      // Simulate transaction confirmation delay (3 seconds)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      setTransactionStatus('confirming');
+
+      // Show transaction confirming toast
+      toast({
+        title: "Transaction Confirming",
+        description: "Waiting for blockchain confirmation...",
+      });
+
+      // Simulate block confirmations (2 seconds)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setTransactionStatus('success');
 
       // Add the project to our store
       addProject(newProject);
 
-      // Simulate a delay for better UX
-      setTimeout(() => {
-        toast({
-          title: "Project uploaded successfully!",
-          description: `Your project "${formData.title}" has been registered with ID: ${newProject.id} in ${department?.name} at ${institution?.name}`,
-          variant: "default",
-        });
+      // Show success toast
+      toast({
+        title: "Project uploaded successfully!",
+        description: `Your project "${formData.title}" has been registered with ID: ${newProject.id} in ${department?.name} at ${institution?.name}`,
+        variant: "default",
+      });
 
+      // Wait a moment before redirecting
+      setTimeout(() => {
         // Redirect to the home page to see the new project
         navigate('/');
-
         setIsSubmitting(false);
+        setTransactionStatus('idle');
       }, 1500);
     } catch (error) {
       console.error('Error submitting project:', error);
+      setTransactionStatus('error');
       toast({
         title: "Failed to upload project",
         description: error instanceof Error ? error.message : "An unknown error occurred",
@@ -174,6 +255,19 @@ const UploadForm: React.FC = () => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md border border-university-blue/10">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* MetaMask Popup */}
+        <MetaMaskPopup
+          isOpen={showMetaMaskPopup}
+          onClose={() => setShowMetaMaskPopup(false)}
+          onConfirm={handleConfirmTransaction}
+          onReject={() => setShowMetaMaskPopup(false)}
+          data={{
+            title: pendingProject?.title || '',
+            department: departments.find(d => d.id.toString() === formData.departmentId)?.name || '',
+            accessLevel: AccessLevel[parseInt(formData.accessLevel) as AccessLevel],
+            gasEstimate: estimatedGasFee
+          }}
+        />
         <div className="space-y-4 mb-6">
           <h3 className="text-lg font-semibold">Project Files</h3>
           <FileUpload
@@ -360,6 +454,98 @@ const UploadForm: React.FC = () => {
           </RadioGroup>
         </div>
 
+        {/* Transaction Status Display */}
+        {transactionStatus !== 'idle' && (
+          <div className={`mb-4 p-4 rounded-lg border ${transactionStatus === 'error' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+            <h3 className="text-lg font-semibold mb-2 flex items-center">
+              {transactionStatus === 'pending' && (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 text-blue-500 animate-spin" />
+                  <span className="text-blue-700">Transaction Pending</span>
+                </>
+              )}
+              {transactionStatus === 'confirming' && (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 text-amber-500 animate-spin" />
+                  <span className="text-amber-700">Confirming Transaction</span>
+                </>
+              )}
+              {transactionStatus === 'success' && (
+                <>
+                  <CheckCircle2 className="mr-2 h-5 w-5 text-green-500" />
+                  <span className="text-green-700">Transaction Successful</span>
+                </>
+              )}
+              {transactionStatus === 'error' && (
+                <>
+                  <span className="mr-2 h-5 w-5 text-red-500">⚠️</span>
+                  <span className="text-red-700">Transaction Failed</span>
+                </>
+              )}
+            </h3>
+
+            {transactionHash && (
+              <div className="mt-2">
+                <p className="text-sm text-gray-600 mb-1">Transaction Hash:</p>
+                <div className="bg-white p-2 rounded border border-gray-200 overflow-x-auto flex justify-between items-center">
+                  <code className="text-xs text-gray-800 truncate">{transactionHash}</code>
+                  <a
+                    href={`https://etherscan.io/tx/${transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-university-blue hover:text-university-navy ml-2 flex-shrink-0"
+                    title="View on Etherscan"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </div>
+                {transactionStatus === 'success' && (
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-xs text-green-600">
+                      ✓ Confirmed in block #{Math.floor(Math.random() * 1000000) + 15000000}
+                    </p>
+                    <a
+                      href="https://etherscan.io"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-university-blue hover:underline"
+                    >
+                      View on Etherscan
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(transactionStatus === 'pending' || transactionStatus === 'confirming') && (
+              <>
+                <div className="mt-3 bg-white rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-full ${transactionStatus === 'pending' ? 'w-1/3' : 'w-2/3'} bg-blue-500 animate-pulse`}
+                  ></div>
+                </div>
+
+                {gasEstimate && (
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                    <div>
+                      <span className="block font-medium">Gas Limit</span>
+                      <span>{gasEstimate.gas}</span>
+                    </div>
+                    <div>
+                      <span className="block font-medium">Gas Price</span>
+                      <span>{gasEstimate.price}</span>
+                    </div>
+                    <div>
+                      <span className="block font-medium">Est. Fee</span>
+                      <span>{gasEstimate.total}</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         <Button
           type="submit"
           className="w-full bg-university-blue hover:bg-university-blue/90 text-white"
@@ -368,7 +554,9 @@ const UploadForm: React.FC = () => {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Uploading...
+              {transactionStatus === 'pending' ? 'Initiating Transaction...' :
+               transactionStatus === 'confirming' ? 'Confirming Transaction...' :
+               transactionStatus === 'success' ? 'Transaction Complete' : 'Uploading...'}
             </>
           ) : (
             'Upload Project'

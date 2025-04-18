@@ -33,9 +33,9 @@ const Navbar: React.FC = () => {
             <Link to="/search" className="px-3 py-2 rounded-md text-white hover:text-university-gold transition-colors">
               Search
             </Link>
-            <Link to="/institutions" className="px-3 py-2 rounded-md text-white hover:text-university-gold transition-colors">
+            {/* <Link to="/institutions" className="px-3 py-2 rounded-md text-white hover:text-university-gold transition-colors">
               Institutions
-            </Link>
+            </Link> */}
             {isConnected && (
               <Link to="/upload" className="px-3 py-2 rounded-md text-white hover:text-university-gold transition-colors">
                 Upload Project
