@@ -1,4 +1,5 @@
 import { ProjectData, AccessLevel, mockProjects } from '@/lib/blockchain';
+import { useWallet } from '@/context/WalletContext';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -79,15 +80,44 @@ export const addProject = (project: ProjectData): void => {
   useProjectStore.getState().addProject(project);
 };
 
-// Get all projects from the store
-export const getAllProjects = (): ProjectData[] => {
+// Get all projects from the store with access control
+export const getAllProjects = (userAddress?: string | null): ProjectData[] => {
+  const projects = useProjectStore.getState().getProjects();
+
+  // If no user address is provided, only return public projects
+  if (!userAddress) {
+    return projects.filter(project => project.accessLevel === AccessLevel.Public);
+  }
+
+  // Return public projects and projects authored by the user
+  return projects.filter(project =>
+    project.accessLevel === AccessLevel.Public ||
+    project.authors.includes(userAddress)
+  );
+};
+
+// Get all projects without access control (admin only)
+export const getAllProjectsAdmin = (): ProjectData[] => {
   return useProjectStore.getState().getProjects();
 };
 
-// Get a project by ID
-export const getProjectById = (id: number): ProjectData | undefined => {
+// Get a project by ID with access control
+export const getProjectById = (id: number, userAddress?: string | null): ProjectData | undefined => {
   const projects = useProjectStore.getState().getProjects();
-  return projects.find(project => project.id === id);
+  const project = projects.find(project => project.id === id);
+
+  if (!project) return undefined;
+
+  // Check access control
+  if (
+    project.accessLevel === AccessLevel.Public || // Public projects are visible to everyone
+    (userAddress && project.authors.includes(userAddress)) // Author can see their own projects
+  ) {
+    return project;
+  }
+
+  // Project exists but user doesn't have access
+  return undefined;
 };
 
 // Update a project in the store

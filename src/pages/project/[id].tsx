@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, Lock, Globe, Users, ExternalLink, Calendar, Building, Bookmark, Clock, Share2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { AccessLevel, ProjectData } from '@/lib/blockchain';
-import { getProjectById, updateProject, getAllProjects } from '@/services/projectService';
+import { getProjectById, updateProject, getAllProjects, getAllProjectsAdmin } from '@/services/projectService';
 import { mockDepartmentsByInstitution, mockInstitutions } from '@/components/InstitutionData';
 import { getIpfsGatewayUrl } from '@/lib/pinata';
 
@@ -31,7 +31,7 @@ const ProjectDetailsPage: React.FC = () => {
 
     try {
       const projectId = parseInt(id || '0');
-      const foundProject = getProjectById(projectId);
+      const foundProject = getProjectById(projectId, address);
 
       if (foundProject) {
         setProject(foundProject);
@@ -49,10 +49,10 @@ const ProjectDetailsPage: React.FC = () => {
     }
   };
 
-  // Load project when component mounts or ID changes
+  // Load project when component mounts, ID changes, or address changes
   useEffect(() => {
     loadProject();
-  }, [id]);
+  }, [id, address]);
 
   // Check if the current user is an author of the project
   const isAuthor = address && project?.authors.some(
@@ -133,13 +133,33 @@ const ProjectDetailsPage: React.FC = () => {
   }
 
   if (!project) {
+    // Check if the project exists but user doesn't have access
+    const projectExists = getAllProjectsAdmin().find(p => p.id === parseInt(id || '0'));
+
     return (
       <Layout>
         <div className="text-center py-20">
-          <h1 className="text-2xl font-bold mb-4 text-gray-800">Project Not Found</h1>
-          <p className="text-gray-600 mb-6">
-            The project you are looking for does not exist or you don't have permission to view it.
-          </p>
+          {projectExists ? (
+            <>
+              <h1 className="text-2xl font-bold mb-4 text-gray-800">Access Restricted</h1>
+              <p className="text-gray-600 mb-6">
+                This project is {projectExists.accessLevel === AccessLevel.Private ? 'private' : 'restricted'} and you don't have permission to view it.
+                {!address && (
+                  <span className="block mt-2">
+                    Please connect your wallet if you are the author of this project.
+                  </span>
+                )}
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold mb-4 text-gray-800">Project Not Found</h1>
+              <p className="text-gray-600 mb-6">
+                The project you are looking for does not exist.
+              </p>
+            </>
+          )}
+
           <Link to="/search">
             <Button className="bg-university-blue hover:bg-university-blue/90 text-white">
               Browse Projects
@@ -398,8 +418,8 @@ const ProjectDetailsPage: React.FC = () => {
           <h2 className="text-2xl font-bold mb-4 text-university-navy">Related Projects</h2>
 
           {(() => {
-            // Get all projects from the same department
-            const allProjects = getAllProjects();
+            // Get all projects from the same department (with access control)
+            const allProjects = getAllProjects(address);
             const relatedProjects = allProjects
               .filter(p => p.departmentId === project.departmentId && p.id !== project.id)
               .slice(0, 3); // Limit to 3 related projects

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useWallet } from '@/context/WalletContext';
 import Layout from '@/components/Layout';
 import ProjectCard from '@/components/ProjectCard';
 import { Button } from '@/components/ui/button';
@@ -11,22 +12,23 @@ import { ArrowRight, Upload } from 'lucide-react';
 const Index: React.FC = () => {
   const [featuredProjects, setFeaturedProjects] = useState<ProjectData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { address } = useWallet();
 
   // Function to load projects
   const loadProjects = () => {
     setIsLoading(true);
-    // Get projects from our project service
-    const projects = getAllProjects();
+    // Get projects from our project service with access control
+    const projects = getAllProjects(address);
     // Sort projects by upload date (newest first)
     const sortedProjects = [...projects].sort((a, b) => b.uploadDate - a.uploadDate);
     setFeaturedProjects(sortedProjects);
     setIsLoading(false);
   };
 
-  // Load projects when component mounts
+  // Load projects when component mounts or when address changes
   useEffect(() => {
     loadProjects();
-  }, []);
+  }, [address]);
 
   // Also load projects when the component is focused (e.g., after navigation)
   useEffect(() => {

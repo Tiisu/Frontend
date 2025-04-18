@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { Upload } from 'lucide-react';
+import { useWallet } from '@/context/WalletContext';
 import Layout from '@/components/Layout';
 import SearchForm, { SearchParams } from '@/components/SearchForm';
 import ProjectCard from '@/components/ProjectCard';
@@ -14,6 +15,7 @@ import { mockDepartmentsByInstitution } from '@/components/InstitutionData';
 const SearchPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { address } = useWallet();
   const [searchResults, setSearchResults] = useState<ProjectData[]>([]);
   const [filteredResults, setFilteredResults] = useState<ProjectData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,7 +25,7 @@ const SearchPage: React.FC = () => {
   // Function to load projects
   const loadProjects = () => {
     setIsLoading(true);
-    const projects = getAllProjects();
+    const projects = getAllProjects(address);
     setSearchResults(projects);
     setIsLoading(false);
   };
@@ -67,7 +69,7 @@ const SearchPage: React.FC = () => {
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [address]);
 
   // Apply filters and sort results
   useEffect(() => {
