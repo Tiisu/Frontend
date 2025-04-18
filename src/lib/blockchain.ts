@@ -86,10 +86,12 @@ export interface ProjectData {
   uploadDate: number;
   ipfsHash: string;
   departmentId: number;
+  institutionId?: number;
   year: number;
   description: string;
   accessLevel: AccessLevel;
   aiSummary?: string;
+  creatorAddress?: string;
 }
 
 export interface Department {
@@ -171,11 +173,11 @@ export async function registerProject(
 
     // Find the ProjectRegistered event
     const event = receipt.logs
-      .filter(log => {
+      .filter((log: any) => {
         const decoded = contract.interface.parseLog(log);
         return decoded?.name === 'ProjectRegistered';
       })
-      .map(log => contract.interface.parseLog(log))[0];
+      .map((log: any) => contract.interface.parseLog(log))[0];
 
     if (event) {
       const projectId = event.args[0];
@@ -416,9 +418,11 @@ export const mockProjects: ProjectData[] = [
     uploadDate: Date.now() - 86400000 * 5, // 5 days ago
     ipfsHash: "QmT8TstX4ngjQwvQfS9ZnuXAT3Cmey1NefdRs5QXwXFiP7",
     departmentId: 1,
+    institutionId: 1,
     year: 2023,
     description: "A blockchain-based identity management system that allows users to control their personal data and share it securely with service providers.",
-    accessLevel: AccessLevel.Public
+    accessLevel: AccessLevel.Public,
+    creatorAddress: "0x1234567890123456789012345678901234567890"
   },
   {
     id: 2,
@@ -427,9 +431,11 @@ export const mockProjects: ProjectData[] = [
     uploadDate: Date.now() - 86400000 * 10, // 10 days ago
     ipfsHash: "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn",
     departmentId: 2,
+    institutionId: 1,
     year: 2023,
     description: "An intelligent energy distribution system that uses IoT devices and blockchain to optimize energy consumption in smart buildings.",
-    accessLevel: AccessLevel.Restricted
+    accessLevel: AccessLevel.Restricted,
+    creatorAddress: "0x2345678901234567890123456789012345678901"
   },
   {
     id: 3,
@@ -438,9 +444,11 @@ export const mockProjects: ProjectData[] = [
     uploadDate: Date.now() - 86400000 * 15, // 15 days ago
     ipfsHash: "QmZMHCFoYMfxw7bUca4wRtmD8ubWxucJNAqjTgG5ATJLVd",
     departmentId: 6,
+    institutionId: 2,
     year: 2023,
     description: "A supply chain management system that uses blockchain to track products from manufacturer to consumer, ensuring authenticity and transparency.",
-    accessLevel: AccessLevel.Public
+    accessLevel: AccessLevel.Public,
+    creatorAddress: "0x3456789012345678901234567890123456789012"
   },
   {
     id: 4,
@@ -449,9 +457,11 @@ export const mockProjects: ProjectData[] = [
     uploadDate: Date.now() - 86400000 * 20, // 20 days ago
     ipfsHash: "QmSgvgwxZGMrjhpVNvKmh3mBJhgUVfhKhrSVnxKzCGNnxk",
     departmentId: 1,
+    institutionId: 1,
     year: 2023,
     description: "A machine learning framework that preserves data privacy by using federated learning and secure multi-party computation.",
-    accessLevel: AccessLevel.Private
+    accessLevel: AccessLevel.Private,
+    creatorAddress: "0x4567890123456789012345678901234567890123"
   },
   {
     id: 5,
@@ -460,9 +470,11 @@ export const mockProjects: ProjectData[] = [
     uploadDate: Date.now() - 86400000 * 25, // 25 days ago
     ipfsHash: "QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ",
     departmentId: 4,
+    institutionId: 2,
     year: 2023,
     description: "Analysis of sustainable building materials and their impact on energy consumption and carbon footprint in modern construction.",
-    accessLevel: AccessLevel.Public
+    accessLevel: AccessLevel.Public,
+    creatorAddress: "0x5678901234567890123456789012345678901234"
   },
   {
     id: 6,
@@ -471,8 +483,10 @@ export const mockProjects: ProjectData[] = [
     uploadDate: Date.now() - 86400000 * 30, // 30 days ago
     ipfsHash: "QmTkzDwWqPbnAh5YiV5VwcTLnGdwSNsNTn2aDxdXBFca7D",
     departmentId: 7,
+    institutionId: 3,
     year: 2023,
     description: "A quantum computing algorithm designed to solve complex optimization problems more efficiently than classical approaches.",
-    accessLevel: AccessLevel.Restricted
+    accessLevel: AccessLevel.Restricted,
+    creatorAddress: "0x6789012345678901234567890123456789012345"
   }
 ];

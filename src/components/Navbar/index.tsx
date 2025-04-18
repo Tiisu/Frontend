@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWallet } from '@/context/WalletContext';
-import { Search, Menu, X } from 'lucide-react';
+import { Search, Menu, X, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ConnectWalletButton from '@/components/ConnectWalletButton';
+import logo from '../../../public/logo.png';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,6 +22,7 @@ const Navbar: React.FC = () => {
           {/* Logo and site name */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
+              <img src={logo} alt="logo" className="w-10 h-10 mr-2" />
               <span className="text-university-gold font-bold text-2xl">UniVault</span>
             </Link>
           </div>
@@ -41,6 +43,10 @@ const Navbar: React.FC = () => {
                 Upload Project
               </Link>
             )}
+            {/* <Link to="/admin/login" className="px-3 py-2 rounded-md text-white hover:text-university-gold transition-colors flex items-center">
+              <Shield className="h-4 w-4 mr-1" />
+              Admin
+            </Link> */}
             <div className="ml-4">
               <ConnectWalletButton />
             </div>
@@ -97,6 +103,14 @@ const Navbar: React.FC = () => {
                 Upload Project
               </Link>
             )}
+            <Link
+              to="/admin/login"
+              className="block px-3 py-2 rounded-md text-white hover:text-university-gold transition-colors flex items-center"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <Shield className="h-4 w-4 mr-1" />
+              Admin Portal
+            </Link>
             <div className="px-3 py-2">
               <ConnectWalletButton />
             </div>

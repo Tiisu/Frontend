@@ -3,6 +3,7 @@ import { generateProjectSummary } from './geminiService';
 import { useWallet } from '@/context/WalletContext';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getStudentByWallet } from './studentService';
 
 // Create a store to manage projects
 interface ProjectStore {
@@ -63,17 +64,26 @@ export const createProject = (
   // Use provided author address or generate a mock one
   const author = authorAddress || `0x${Math.random().toString(16).substring(2, 42)}`;
 
+  // Get student information if available
+  const student = getStudentByWallet(author);
+
+  // If student exists, use their department and institution
+  const studentDepartmentId = student ? student.departmentId : departmentId;
+  const institutionId = student ? student.institutionId : 1; // Default to first institution if not found
+
   // Create the project object
   const project: ProjectData = {
     id: newId,
     title,
     description,
-    departmentId,
+    departmentId: studentDepartmentId,
+    institutionId,
     year,
     accessLevel,
     ipfsHash: hash,
     authors: [author],
-    uploadDate: Date.now()
+    uploadDate: Date.now(),
+    creatorAddress: author
   };
 
   return project;
@@ -101,17 +111,32 @@ export const addProject = async (project: ProjectData): Promise<void> => {
 // Get all projects from the store with access control
 export const getAllProjects = (userAddress?: string | null): ProjectData[] => {
   const projects = useProjectStore.getState().getProjects();
+  const student = userAddress ? getStudentByWallet(userAddress) : null;
 
   // If no user address is provided, only return public projects
   if (!userAddress) {
     return projects.filter(project => project.accessLevel === AccessLevel.Public);
   }
 
-  // Return public projects and projects authored by the user
-  return projects.filter(project =>
-    project.accessLevel === AccessLevel.Public ||
-    project.authors.includes(userAddress)
-  );
+  return projects.filter(project => {
+    // Public projects are visible to everyone
+    if (project.accessLevel === AccessLevel.Public) {
+      return true;
+    }
+
+    // Projects authored by the user are always visible
+    if (project.authors.includes(userAddress)) {
+      return true;
+    }
+
+    // Institution-level projects are visible to members of the same institution
+    if (project.accessLevel === AccessLevel.Institution && student &&
+        project.institutionId === student.institutionId) {
+      return true;
+    }
+
+    return false;
+  });
 };
 
 // Get all projects without access control (admin only)
@@ -123,13 +148,16 @@ export const getAllProjectsAdmin = (): ProjectData[] => {
 export const getProjectById = (id: number, userAddress?: string | null): ProjectData | undefined => {
   const projects = useProjectStore.getState().getProjects();
   const project = projects.find(project => project.id === id);
+  const student = userAddress ? getStudentByWallet(userAddress) : null;
 
   if (!project) return undefined;
 
   // Check access control
   if (
     project.accessLevel === AccessLevel.Public || // Public projects are visible to everyone
-    (userAddress && project.authors.includes(userAddress)) // Author can see their own projects
+    (userAddress && project.authors.includes(userAddress)) || // Author can see their own projects
+    (project.accessLevel === AccessLevel.Institution && student &&
+     project.institutionId === student.institutionId) // Institution members can see institution projects
   ) {
     return project;
   }

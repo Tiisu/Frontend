@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { InfoIcon, Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
+import { useAdminAuth } from '@/context/AdminAuthContext';
+import { getStudentByWallet } from '@/services/studentService';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,7 +37,9 @@ interface FormErrors {
 
 const UploadForm: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isConnected, address } = useWallet();
+  const { isAuthenticated } = useAdminAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<'idle' | 'pending' | 'confirming' | 'ai-processing' | 'success' | 'error'>('idle');
   const [transactionHash, setTransactionHash] = useState<string>('');
@@ -72,6 +76,35 @@ const UploadForm: React.FC = () => {
     // Use mock institutions data
     setInstitutions(mockInstitutions);
   }, []);
+
+  // Auto-select department and institution when wallet is connected and user is on admin dashboard
+  useEffect(() => {
+    if (isConnected && address) {
+      // Check if the user is an admin and has a student record
+      const student = getStudentByWallet(address);
+
+      // Check if user is on admin dashboard
+      const isOnAdminDashboard = location.pathname.includes('/admin');
+
+      console.log('Connected wallet:', address);
+      console.log('Found student:', student);
+      console.log('Is authenticated:', isAuthenticated);
+      console.log('Is on admin dashboard:', isOnAdminDashboard);
+
+      if (student && (isAuthenticated || isOnAdminDashboard)) {
+        console.log('Auto-selecting institution:', student.institutionId, 'and department:', student.departmentId);
+
+        // Auto-select the institution
+        setSelectedInstitutionId(student.institutionId.toString());
+
+        // Auto-select the department
+        setFormData(prev => ({
+          ...prev,
+          departmentId: student.departmentId.toString()
+        }));
+      }
+    }
+  }, [isConnected, address, isAuthenticated, location]);
 
   // Load departments when institution is selected
   useEffect(() => {
